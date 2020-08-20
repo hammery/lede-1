@@ -1,50 +1,74 @@
-#
+#=================================================
 
-# This is free software, lisence use MIT.
+# https://github.com/P3TERX/Actions-OpenWrt
 
-# 
+# Description: Build OpenWrt using GitHub Actions
 
-# Copyright (C) 2019 P3TERX <https://p3terx.com>
+# Lisence: MIT
 
-# Copyright (C) 2019 KFERMercer <KFER.Mercer@gmail.com>
+# Author: P3TERX
 
-# 
+# Blog: https://p3terx.com
 
-# <https://github.com/KFERMercer/OpenWrt-CI>
-
-#
+#=================================================
 
 
 
-name: k320200711
+name: OpenWrtk3T
 
 
 
 on:
 
+  release:
+
+    types: [published]
+
   push:
 
-    branches: 
+    branches:
 
-      - master
+      - dev-lean-lede
 
-  # schedule:
+    paths:
 
-  #   - cron: 0 20 * * *
+      - '.config'
 
-  # release:
+#  schedule:
 
-  #   types: [published]
+#    - cron: 0 8 * * 5
+
+  watch:
+
+    types: [started]
+
+
+
+env:
+
+  REPO_URL: https://github.com/coolsnowwolf/lede
+
+  REPO_BRANCH: master
+
+  CONFIG_FILE: .config
+
+  DIY_SH: diy.sh
+
+  FREE_UP_DISK: false
+
+  SSH_ACTIONS: true
+
+  UPLOAD_BIN_DIR: false
+
+  UPLOAD_FIRMWARE: true
+
+  TZ: Asia/Shanghai
 
 
 
 jobs:
 
-
-
   build:
-
-
 
     runs-on: ubuntu-latest
 
@@ -52,295 +76,121 @@ jobs:
 
     steps:
 
+    - name: Checkout
 
+      uses: actions/checkout@master
 
-      - name: Checkout
 
-        uses: actions/checkout@master
 
-        with:
+    - name: Initialization environment
 
-          ref: master
+      env:
 
+        DEBIAN_FRONTEND: noninteractive
 
+      run: |
 
-      - name: Initialization environment
+        sudo swapoff /swapfile
 
-        env:
+        sudo rm -rf /swapfile /etc/apt/sources.list.d/*
 
-          DEBIAN_FRONTEND: noninteractive
+        sudo -E apt-get -qq update
 
-        run: |
+        sudo -E apt-get -qq install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler
 
-          docker rmi `docker images -q`
+        curl -fsSL https://raw.githubusercontent.com/P3TERX/dotfiles/master/.bashrc >> ~/.bashrc
 
-          echo "Deleting files, please wait ..."
+    - name: Free up disk space
 
-          sudo rm -rf /usr/share/dotnet /etc/mysql /etc/php
+      if: env.FREE_UP_DISK == 'true'
 
-          sudo -E apt-get -y purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* mysql* php*
+      env:
 
-          sudo -E apt-get update
+        DEBIAN_FRONTEND: noninteractive
 
-          sudo -E apt-get -y install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs git-core gcc-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler
+      run: |
 
-          sudo -E apt-get -y autoremove --purge
+        sudo rm -rf /usr/share/dotnet
 
-          sudo -E apt-get clean
+        docker rmi `docker images -q`
 
-      - name: Update feeds
+        sudo -E apt-get -q purge azure-cli ghc* zulu* hhvm llvm* firefox google* dotnet* powershell openjdk* mysql* php*
 
-        run: |
+        sudo -E apt-get -qq autoremove --purge
 
-          ./scripts/feeds update -a
+        sudo -E apt-get -qq clean
 
-          ./scripts/feeds install -a
+    - name: Clone source code
 
-      - name: Costom configure file
+      run: git clone --depth 1 $REPO_URL -b $REPO_BRANCH openwrt
 
-        run: |
+    - name: ssr
 
-          rm -f ./.config*
+      run: cd openwrt/package && git clone  https://github.com/fw876/helloworld
 
-          touch ./.config
+    - name: clean
 
-          cat >> .config <<EOF
+      run:  cd openwrt && ./scripts/feeds clean
 
-          CONFIG_TARGET_bcm53xx=y
+    - name: Update feeds
 
-          CONFIG_TARGET_bcm53xx_DEVICE_phicomm-k3=y
+      run: cd openwrt && ./scripts/feeds update -a
 
-          CONFIG_TARGET_BOARD="bcm53xx"
 
-          # CONFIG_FEED_luci is not set
 
-          # CONFIG_FEED_packages is not set
+    - name: Install feeds
 
-          # CONFIG_FEED_routing is not set
+      run: cd openwrt && ./scripts/feeds install -a
 
-          # CONFIG_KERNEL_AIO is not set
 
-          # CONFIG_KERNEL_CGROUPS is not set
 
-          # CONFIG_KERNEL_FANOTIFY is not set
+    - name: Load custom configuration
 
-          # CONFIG_KERNEL_FHANDLE is not set
+      run: |
 
-            CONFIG_LIBSODIUM_MINIMAL=y
+        cd openwrt
 
-          # CONFIG_OPENSSL_OPTIMIZE_SPEED is not set
+        make defconfig
 
-            CONFIG_PACKAGE_libev=y
+    - name: SSH connection to Actions
 
-            CONFIG_PACKAGE_libmbedtls=y
+      uses: P3TERX/debugger-action@master
 
-            CONFIG_PACKAGE_libsodium=y
+      if: env.SSH_ACTIONS == 'true'
 
-            CONFIG_PACKAGE_libustream-openssl=y
 
-            CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks=y
 
-            CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_V2ray=y
+    - name: Download package
 
-            CONFIG_PACKAGE_luci-app-wifischedule=y
+      id: package
 
-            CONFIG_PACKAGE_luci-i18n-wifischedule-zh-cn=y
+      run: |
 
-            CONFIG_PACKAGE_shadowsocks-libev-config=y
+        cd openwrt
 
-            CONFIG_PACKAGE_shadowsocks-libev-ss-redir=y
+        make download -j8
 
-            CONFIG_PACKAGE_v2ray=y
+        find dl -size -1024c -exec ls -l {} \;
 
-            CONFIG_PACKAGE_wifischedule=y
+        find dl -size -1024c -exec rm -f {} \;
 
-            CONFIG_PACKAGE_luci-app-passwall=y
+    - name: Compile the firmware
 
+      id: compile
 
+      run: |
 
+        cd openwrt
 
+        echo -e "$(nproc) thread compile"
 
-          EOF
+        make -j$(nproc) || make -j1 V=s
 
-          # 固件压缩:
+        echo "::set-output name=status::success"
 
-          # cat >> .config <<EOF
+        
 
-          # CONFIG_TARGET_IMAGES_GZIP=y
-
-          # EOF
-
-          # 编译UEFI固件:
-
-          # cat >> .config <<EOF
-
-          # CONFIG_EFI_IMAGES=y
-
-          # EOF
-
-          # IPv6支持:
-
-          # cat >> .config <<EOF
-
-          # CONFIG_PACKAGE_dnsmasq_full_dhcpv6=y
-
-          # CONFIG_PACKAGE_ipv6helper=y
-
-          # EOF
-
-          # 多文件系统支持:
-
-          # cat >> .config <<EOF
-
-          # CONFIG_PACKAGE_kmod-fs-nfs=y
-
-          # CONFIG_PACKAGE_kmod-fs-nfs-common=y
-
-          # CONFIG_PACKAGE_kmod-fs-nfs-v3=y
-
-          # CONFIG_PACKAGE_kmod-fs-nfs-v4=y
-
-          # CONFIG_PACKAGE_kmod-fs-ntfs=y
-
-          # CONFIG_PACKAGE_kmod-fs-squashfs=y
-
-          # EOF
-
-          # USB3.0支持:
-
-          # cat >> .config <<EOF
-
-          # CONFIG_PACKAGE_kmod-usb-ohci=y
-
-          # CONFIG_PACKAGE_kmod-usb-ohci-pci=y
-
-          # CONFIG_PACKAGE_kmod-usb2=y
-
-          # CONFIG_PACKAGE_kmod-usb2-pci=y
-
-          # CONFIG_PACKAGE_kmod-usb3=y
-
-          # EOF
-
-          # 常用LuCI插件选择:
-
-           cat >> .config <<EOF
-
-          # CONFIG_PACKAGE_luci-app-adbyby-plus=y
-
-          # CONFIG_PACKAGE_luci-app-aria2=y
-
-          # CONFIG_PACKAGE_luci-app-baidupcs-web=y
-
-          # CONFIG_PACKAGE_luci-app-docker=y
-
-          # CONFIG_PACKAGE_luci-app-frpc=y
-
-          # CONFIG_PACKAGE_luci-app-hd-idle=y
-
-          # CONFIG_PACKAGE_luci-app-kodexplorer=y
-
-          # CONFIG_PACKAGE_luci-app-minidlna=y
-
-          # CONFIG_PACKAGE_luci-app-openvpn=y
-
-          # CONFIG_PACKAGE_luci-app-openvpn-server=y
-
-          # CONFIG_PACKAGE_luci-app-qbittorrent=y
-
-          # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Kcptun=y
-
-           CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_Shadowsocks=y
-
-          # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Server=y
-
-          # CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_ShadowsocksR_Socks=y
-
-           CONFIG_PACKAGE_luci-app-ssr-plus_INCLUDE_V2ray=y
-
-          # CONFIG_PACKAGE_luci-app-ttyd=y
-
-          # CONFIG_PACKAGE_luci-app-v2ray-server=y
-
-          # CONFIG_PACKAGE_luci-app-verysync=y
-
-          # CONFIG_PACKAGE_luci-app-webadmin=y
-
-          # CONFIG_PACKAGE_luci-app-wireguard=y
-
-          # CONFIG_PACKAGE_luci-app-wrtbwmon=y
-
-          EOF
-
-          # LuCI主题:
-
-          # cat >> .config <<EOF
-
-          # CONFIG_PACKAGE_luci-theme-argon=y
-
-          # CONFIG_PACKAGE_luci-theme-netgear=y
-
-          # EOF
-
-          # 常用软件包:
-
-          # cat >> .config <<EOF
-
-          # CONFIG_PACKAGE_curl=y
-
-          # CONFIG_PACKAGE_htop=y
-
-          # CONFIG_PACKAGE_nano=y
-
-          # CONFIG_PACKAGE_screen=y
-
-          # CONFIG_PACKAGE_tree=y
-
-          # CONFIG_PACKAGE_vim-fuller=y
-
-          # CONFIG_PACKAGE_wget=y
-
-          # EOF
-
-          # 取消编译VMware镜像以及镜像填充 (不要删除被缩进的注释符号):
-
-          # cat >> .config <<EOF
-
-          # # CONFIG_TARGET_IMAGES_PAD is not set
-
-          # # CONFIG_VMDK_IMAGES is not set
-
-          # EOF
-
-          # 
-
-          # ========================固件定制部分结束========================
-
-          # 
-
-          sed -i 's/^[ \t]*//g' ./.config
-
-          make defconfig
-
-      - name: Make download
-
-        run: |
-
-          make download -j8
-
-          find dl -size -1024c -exec ls -l {} \;
-
-          find dl -size -1024c -exec rm -f {} \;
-
-      - name: Compile firmware
-
-        run: |
-
-          echo -e "$(nproc) thread build."
-
-          make -j$(nproc) V=s
-
-      - name: Assemble artifact
+        -name: Assemble artifact
 
         run: |
 
@@ -350,6 +200,8 @@ jobs:
 
           find ./bin/targets/ -name "*combined*img*" | xargs -i mv -f {} ./artifact/
 
+          find ./bin/targets/ -name "*vmdk*" | xargs -i mv -f {} ./artifact/
+
           find ./bin/targets/ -name "*efi*img*" | xargs -i mv -f {} ./artifact/
 
           find ./bin/targets/ -name "*sysupgrade*bin*" | xargs -i mv -f {} ./artifact/
@@ -358,7 +210,7 @@ jobs:
 
           mv .config ./artifact/
 
-      - name: Upload artifact
+        - name: Upload artifact
 
         uses: actions/upload-artifact@master
 
@@ -367,3 +219,4 @@ jobs:
           name: OpenWrt firmware
 
           path: ./artifact/
+
