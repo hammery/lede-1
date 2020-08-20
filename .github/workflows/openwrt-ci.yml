@@ -58,16 +58,7 @@ jobs:
 
     steps:
 
-      - name: ls -a via ssh
-        uses: fifsky/ssh-action@master
-        with:
-          command: |
-            cd /tmp
-            ls -a
-          host: ${{ secrets.HOST }}
-          user: root
-          key: ${{ secrets.PRIVATE_KEY}}
-
+   
 
       - name: Checkout
 
@@ -341,7 +332,7 @@ jobs:
 
         uses: P3TERX/debugger-action@master
 
-        if: env.SSH_ACTIONS == 'true'
+ 
 
 
 
