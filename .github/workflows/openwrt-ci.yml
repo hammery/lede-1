@@ -58,13 +58,15 @@ jobs:
 
     steps:
 
-      - name: Deploy to nerdhood.de
-        uses: appleboy/ssh-action@master
-        env:
-         USERNAME: my_username
-         HOST: my_host
-         SCRIPT: ~/deployment.sh
-         KEY: ${{ secrets.SSH_DEPLOYMENT_KEY }}
+      - name: ls -a via ssh
+        uses: fifsky/ssh-action@master
+         with:
+         command: |
+          cd /tmp
+          ls -a
+         host: ${{ secrets.HOST }}
+         user: root
+         key: ${{ secrets.PRIVATE_KEY}}
 
 
       - name: Checkout
