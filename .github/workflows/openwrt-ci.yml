@@ -164,20 +164,19 @@ jobs:
 
         run: |
 
-          rm -rf ./artifact/
-
-          mkdir -p ./artifact/
+       
           cd openwrt
-      
-          find ./bin/targets/ -name "*combined*img*" | xargs -i mv -f {} ./openwrt/artifact/
+          mkdir -p ./artifact/
+                
+          find ./bin/targets/ -name "*combined*img*" | xargs -i mv -f {} ./artifact/
 
-          find ./bin/targets/ -name "*efi*img*" | xargs -i mv -f {} ./openwrt/artifact/
+          find ./bin/targets/ -name "*efi*img*" | xargs -i mv -f {} ./artifact/
 
-          find ./bin/targets/ -name "*sysupgrade*bin*" | xargs -i mv -f {} ./openwrt/artifact/
+          find ./bin/targets/ -name "*sysupgrade*bin*" | xargs -i mv -f {} ./artifact/
 
-          find ./bin/targets/ -name "*k3*" | xargs -i mv -f {} ./openwrt/artifact/
+          find ./bin/targets/ -name "*k3*" | xargs -i mv -f {} ./artifact/
 
-          mv .config ./openwrt/artifact/
+          mv .config ./artifact/
 
       - name: Upload artifact
 
