@@ -173,7 +173,7 @@ jobs:
           find ./bin/targets/ -name "*sysupgrade*bin*" | xargs -i mv -f {} ./artifact/
 
           find ./bin/targets/ -name "*k3*" | xargs -i mv -f {} ./artifact/
-          find ./bin/targets/ -name "*default*" | xargs -i mv -f {} ./artifact/
+          find ./bin/targets/ -name "*gz*" | xargs -i mv -f {} ./artifact/
 
           mv .config ./artifact/
 
