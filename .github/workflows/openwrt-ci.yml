@@ -47,7 +47,7 @@ env:
  
   REPO_URL: https://github.com/coolsnowwolf/lede
   FREE_UP_DISK: false
-
+  REPO_BRANCH: master
   SSH_ACTIONS: true
 
   UPLOAD_BIN_DIR: false
