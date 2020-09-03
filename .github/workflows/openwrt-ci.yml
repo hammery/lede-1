@@ -177,6 +177,7 @@ jobs:
           find ./bin/targets/ -name "*vmdk*" | xargs -i mv -f {} ./artifact/
 
           mv .config ./artifact/
+          
 
       - name: Upload artifact
 
