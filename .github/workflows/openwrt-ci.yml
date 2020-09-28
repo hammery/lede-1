@@ -134,7 +134,7 @@ jobs:
           
       -  name: SSH connection to Actions
 
-         uses: P3TERX/debugger-action@master
+         uses: P3TERX/debugger-action@main
 
          if: env.SSH_ACTIONS == 'true'
 
