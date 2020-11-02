@@ -177,7 +177,6 @@ jobs:
           find ./bin/targets/ -name "*psg*" | xargs -i mv -f {} ./artifact/
           find ./bin/targets/ -name "*vmdk*" | xargs -i mv -f {} ./artifact/
           find ./bin/targets/ -name "*psg*" | xargs -i mv -f {} ./artifact/
-          find ./bin/targets/ -name "*.ipk" | xargs -i mv -f {} ./artifact/
           
 
           mv .config ./artifact/
